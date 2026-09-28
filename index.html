@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Викторина</title>
+<style>:root {
+  --bg1: #0e1130;
+  --bg2: #1a1f4d;
+  --card: #232858;
+  --card2: #2d3370;
+  --line: rgba(255,255,255,.14);
+  --text: #eef1ff;
+  --muted: #9aa3d0;
+  --accent: #ffd23f;
+  --accent2: #38bdf8;
+  --ok: #4ade80;
+  --bad: #fb7185;
+  --violet: #c084fc;
+  --radius: 16px;
+  --shadow: 0 18px 50px rgba(0,0,0,.45);
+  --grad: linear-gradient(135deg, #ffd23f, #ff9f43);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 700px at 20% -10%, #2b3175 0%, transparent 60%),
+              radial-gradient(1000px 600px at 110% 110%, #452a7a 0%, transparent 55%),
+              linear-gradient(160deg, var(--bg1), var(--bg2));
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+#confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 200;
+}
+
+/* ---------- screens ---------- */
+.screen { display: none; width: 100%; justify-content: center; }
+.screen.active { display: flex; animation: fadeUp .45s ease both; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)),
+              var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  width: 100%;
+  max-width: min(1600px, 96vw);
+}
+.card.narrow { max-width: 460px; }
+.card.setup { max-width: min(1100px, 96vw); }
+
+.logo {
+  font-size: 34px;
+  text-align: center;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.subtitle { text-align: center; color: var(--muted); margin-bottom: 22px; }
+
+.field { margin-bottom: 18px; }
+.field > label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
+.field > label b { color: var(--text); }
+
+/* ---------- controls ---------- */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--card2);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--grad);
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #fff;
+  cursor: pointer;
+}
+
+select {
+  width: 100%;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+select:focus { border-color: var(--accent2); }
+
+.mode-switch {
+  display: flex;
+  background: var(--card2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 18px;
+  gap: 4px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.mode-btn.active {
+  background: var(--grad);
+  color: #21202f;
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0); }
+.btn.primary { background: var(--grad); color: #21202f; box-shadow: 0 8px 22px rgba(255,210,63,.28); }
+.btn.primary:hover { box-shadow: 0 12px 30px rgba(255,210,63,.4); }
+.btn.ghost { background: var(--card2); color: var(--text); border: 1px solid var(--line); }
+.btn.ok { background: var(--ok); color: #0b2f1d; }
+.btn.bad { background: var(--bad); color: #3a0a12; }
+.btn.big { width: 100%; font-size: 17px; padding: 15px; margin-top: 6px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.small { padding: 7px 12px; font-size: 13px; margin-top: 8px; }
+
+/* ---------- names ---------- */
+#names-box { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+#names-box .name-cloud { display: flex; align-items: center; gap: 8px; background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+#names-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  min-width: 0;
+}
+#names-box input::placeholder { color: var(--muted); }
+.name-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+
+/* ---------- chips (themes) ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: var(--card2);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip.on { background: var(--grad); color: #21202f; border-color: transparent; font-weight: 600; }
+.chip .chip-lvl {
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255,255,255,.16);
+  color: var(--text);
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 96px;
+}
+.chip .chip-lvl option { background: #1b2333; color: var(--text); }
+.chip .chip-lvl:hover { filter: brightness(1.15); }
+.chip.on .chip-lvl { background: rgba(33,32,47,.18); color: inherit; }
+.hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+/* ---------- pick screen ---------- */
+.pick-card { text-align: center; max-width: 520px; }
+.pick-card h2 { color: var(--muted); font-size: 20px; margin-bottom: 24px; }
+.wheel-wrap {
+  position: relative;
+  width: min(72vw, 340px);
+  margin: 0 auto 20px;
+}
+#pick-wheel {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 50%;
+  box-shadow: 0 0 0 8px rgba(255,255,255,.08), 0 18px 40px rgba(0,0,0,.5);
+}
+.wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 25px solid #fff;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.45));
+  z-index: 2;
+}
+.pick-result {
+  font-size: 22px;
+  font-weight: 800;
+  min-height: 30px;
+  margin: 4px 0 16px;
+}
+#pick-spin { margin-bottom: 10px; }
+
+@keyframes pop {
+  0%   { transform: scale(.7); }
+  100% { transform: scale(1); }
+}
+
+.show { visibility: hidden; }
+
+/* ---------- board ---------- */
+#screen-board { flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: min(1800px, 97vw); }
+
+.board-top { width: 100%; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.board-title { display: flex; align-items: center; gap: 12px; }
+.turn-badge {
+  background: var(--grad);
+  color: #21202f;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 14px;
+  box-shadow: 0 6px 18px rgba(255,210,63,.3);
+  transition: transform .3s;
+}
+.turn-badge.bump { animation: pop .4s; }
+.used-count { color: var(--muted); font-size: 14px; }
+
+.scores { display: flex; flex-wrap: wrap; gap: 10px; }
+.score-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: var(--shadow);
+  min-width: 130px;
+  transition: all .25s;
+}
+.score-card .dot { width: 13px; height: 13px; border-radius: 50%; flex: none; }
+.score-card .s-name { font-size: 14px; font-weight: 600; }
+.score-card .s-pts { margin-left: auto; font-size: 19px; font-weight: 800; color: var(--accent); }
+.score-card.active { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(56,189,248,.35), var(--shadow); }
+.score-card.bump .s-pts { animation: ptsBump .5s; }
+@keyframes ptsBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.5); color: var(--ok); }
+  100% { transform: scale(1); }
+}
+
+.grid-wrap { width: 100%; overflow-x: auto; padding-bottom: 8px; }
+.grid {
+  display: grid;
+  gap: 12px 14px;
+  grid-auto-rows: auto;
+  min-width: min-content;
+  align-items: center;
+}
+.price-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+.th-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  text-align: left;
+  font-size: 20px;
+  font-weight: 700;
+  min-height: 96px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.1), transparent) , var(--card2);
+  border: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.th-label .head-lvl {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: .75;
+  background: rgba(255,255,255,.1);
+  padding: 1px 8px;
+  border-radius: 99px;
+}
+.cell {
+  border: none;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.22), rgba(255,255,255,0) 60%), linear-gradient(160deg, #4b63e6, #2f3fb5);
+  color: var(--accent);
+  font-size: 40px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,.35), inset 0 -3px 6px rgba(0,0,0,.22), inset 0 2px 4px rgba(255,255,255,.18);
+  transition: transform .13s ease, box-shadow .2s ease, filter .2s;
+}
+.cell:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 12px 26px rgba(0,0,0,.45); filter: brightness(1.1); }
+.cell:active { transform: scale(.95); }
+.cell.used { background: rgba(255,255,255,.06); color: transparent; cursor: default; box-shadow: none; filter: none; transform: none; }
+.cell.used::after { content: "✓"; font-size: 42px; color: var(--muted); }
+.cell.empty { background: transparent; border: 3px dashed rgba(255,255,255,.22); color: transparent; pointer-events: none; box-shadow: none; }
+
+/* ---------- question modal ---------- */
+.modal { position: fixed; inset: 0; display: none; z-index: 100; }
+.modal.open { display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(10,12,30,.78); }
+.modal-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px;
+  animation: modalIn .35s cubic-bezier(.25,1.2,.4,1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(.8) translateY(30px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.close {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 28px;
+  cursor: pointer;
+  line-height: 1;
+}
+.close:hover { color: var(--bad); }
+
+.q-meta { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+.q-theme { background: var(--card2); padding: 6px 12px; border-radius: 99px; font-size: 13px; }
+.q-price { background: var(--grad); color: #21202f; padding: 6px 12px; border-radius: 99px; font-size: 13px; font-weight: 800; }
+.q-text { font-size: 22px; font-weight: 600; line-height: 1.4; margin-bottom: 20px; }
+
+#q-answers { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+#q-answers.choice-answers { display: grid; grid-template-columns: repeat(2, 1fr); }
+.opt {
+  border: 1px solid var(--line);
+  background: var(--card2);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 15px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.opt .opt-letter {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  flex: none;
+}
+.opt:hover { border-color: var(--accent2); }
+.opt.sel { border-color: var(--accent2); background: rgba(56,189,248,.18); box-shadow: 0 0 0 1px var(--accent2); }
+.opt.sel .opt-letter { background: var(--accent2); color: #0a1020; }
+.opt.right { border-color: var(--ok); background: rgba(74,222,128,.2); color: var(--ok); }
+.opt.right .opt-letter { background: var(--ok); color: #0b2f1d; }
+.opt.wrong { border-color: var(--bad); background: rgba(251,113,133,.2); color: var(--bad); text-decoration: line-through; }
+.opt.wrong .opt-letter { background: var(--bad); color: #3a0a12; }
+.opt:disabled { cursor: default; }
+
+input[type="text"].answer, input[type="number"].answer {
+  width: 100%;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 16px;
+  padding: 13px 16px;
+  outline: none;
+  transition: border-color .2s;
+  margin-bottom: 20px;
+}
+input[type="text"].answer:focus, input[type="number"].answer:focus { border-color: var(--accent2); }
+
+.q-asker { margin-bottom: 16px; }
+.label-asker { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+#q-asker-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.asker-btn {
+  border: 1px solid var(--line);
+  background: var(--card2);
+  color: var(--text);
+  border-radius: 99px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.asker-btn .dot { width: 10px; height: 10px; border-radius: 50%; }
+.asker-btn.sel { border-color: var(--accent2); background: rgba(56,189,248,.18); }
+
+.q-actions { margin-top: 4px; }
+
+.q-verdict { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); animation: fadeUp .3s ease; }
+.correct-title { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+.q-correct { font-size: 18px; font-weight: 800; color: var(--ok); margin-bottom: 14px; }
+.verdict-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.verdict-btns .btn { flex: 1; min-width: 150px; }
+
+/* ---------- end ---------- */
+.end-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.end-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.end-row .place { font-size: 20px; font-weight: 800; width: 34px; color: var(--muted); }
+.end-row.first .place { color: var(--accent); }
+.end-row .e-name { font-size: 17px; font-weight: 700; }
+.end-row .e-pts { margin-left: auto; font-size: 20px; font-weight: 800; color: var(--accent); }
+.end-title { text-align: center; margin-bottom: 18px; }
+
+/* ---------- editor ---------- */
+.editor { max-width: min(1600px, 96vw); }
+.editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.editor-head h1 { font-size: 26px; }
+.editor-tools { display: flex; gap: 10px; flex-wrap: wrap; }
+.theme-strip { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.theme-pill {
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 6px 14px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.theme-pill .del { cursor: pointer; color: var(--muted); font-weight: 800; background: none; border: none; font-size: 16px; }
+    .theme-pill .del:hover { color: var(--bad); }
+    .theme-pill em { color: var(--muted); font-style: normal; font-size: 12px; }
+    .theme-pill.clickable { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+    .theme-pill.clickable:hover { border-color: var(--accent2); }
+    .theme-pill.open { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(56,189,248,.35); }
+    .theme-pill.open .tp-name { color: var(--text); font-weight: 700; }
+    .theme-pill .tp-lvl {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent2);
+      background: rgba(56,189,248,.12);
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      max-width: 130px;
+    }
+    .theme-pill .tp-lvl:hover { background: rgba(56,189,248,.24); }
+    .theme-pill .tp-lvl option { background: #1b2333; color: var(--text); }
+
+.q-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 20px; }
+.q-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--accent);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.q-row .q-type { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 3px 8px; border-radius: 6px; background: var(--card); color: var(--muted); flex: none; }
+.q-row .q-brief { flex: 1; font-size: 14px; min-width: 0; line-height: 1.4; white-space: normal; text-overflow: clip; overflow: visible; }
+.q-row .q-brief .b { display: block; overflow-wrap: anywhere; }
+.q-row .q-brief .t { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.q-row .q-price { flex: none; }
+.q-row .row-btns { display: flex; gap: 6px; flex: none; }
+.q-row .row-btns button { background: var(--card); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+.q-row .row-btns button.danger:hover { background: var(--bad); color: #fff; }
+
+.add-theme { display: flex; gap: 8px; margin-bottom: 10px; }
+.add-theme input { flex: 1; }
+.add-theme select { width: auto; max-width: 160px; font-size: 13px; padding: 9px 10px; }
+
+.empty-state { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 15px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid .full { grid-column: 1 / -1; }
+.ed-field label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+.ed-field input, .ed-field select, .ed-field textarea {
+  width: 100%;
+  background: var(--card2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  font-family: inherit;
+}
+.ed-field input:focus, .ed-field select:focus, .ed-field textarea:focus { border-color: var(--accent2); }
+.ed-field textarea { resize: vertical; min-height: 74px; }
+.opt-in { display: flex; align-items: center; gap: 8px; }
+.opt-in span { color: var(--muted); font-weight: 700; width: 24px; }
+.opt-in input { flex: 1; }
+#opt-box { display: flex; flex-direction: column; gap: 8px; }
+
+.toast {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--card2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 300;
+  opacity: 0;
+  transition: all .3s;
+  font-size: 14px;
+  text-align: center;
+  max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.editor-link { display: inline-block; color: var(--muted); text-decoration: none; font-size: 14px; }
+.editor-link:hover { color: var(--accent2); text-decoration: underline; }
+
+.lock-screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 1000; background: rgba(10,12,30,.88); padding: 20px; }
+.lock-screen.open { display: flex; }
+.lock-screen .card { width: 100%; }
+.lock-screen.shake { animation: shake .4s; }
+@keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-12px); }
+  40% { transform: translateX(12px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+  100% { transform: translateX(0); }
+}
+
+@media (max-width: 620px) {
+  #names-box { grid-template-columns: 1fr; }
+  #q-answers.choice-answers { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  body { padding: 14px; }
+  .cell { width: 72px; height: 72px; font-size: 24px; }
+  .th-label { min-height: 72px; font-size: 16px; }
+}</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+
+<section class="screen active" id="screen-setup">
+  <div class="card setup">
+    <h1 class="logo">&#127916; Викторина</h1>
+    <p class="subtitle">Командная или одиночная игра</p>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" data-mode="solo">Одиночная</button>
+      <button class="mode-btn" data-mode="team">Командная</button>
+    </div>
+
+    <div class="field">
+      <label id="players-label" for="players-slider">Число игроков: <b>2</b></label>
+      <input type="range" id="players-slider" min="1" max="12" value="2">
+    </div>
+    <div id="names-box"></div>
+    <p class="hint">Вопросов в игре должно быть больше, чем игроков.</p>
+
+    <div class="field">
+      <label>Темы игры <span class="hint">кликните на класс предмета, чтобы выбрать его</span></label>
+      <div id="themes-box" class="chips"></div>
+      <button class="btn ghost small" id="btn-select-all-themes" type="button">выбрать все</button>
+    </div>
+
+    <div class="field">
+      <label id="qcount-label" for="qcount-slider">Вопросов на тему: <b>6</b></label>
+      <input type="range" id="qcount-slider" min="1" max="6" value="6">
+      <p class="hint">В каждой теме случайно выбираются вопросы на каждую сложность (100–600 очков).</p>
+    </div>
+
+    <div class="field">
+      <label for="level-filter">Уровень сложности тем</label>
+      <select id="level-filter">
+        <option value="0">Все темы</option>
+        <option value="5">5 класс</option>
+        <option value="6">6 класс</option>
+        <option value="7">7 класс</option>
+        <option value="8">8 класс</option>
+        <option value="9">9 класс</option>
+        <option value="10">10 класс</option>
+        <option value="11">11 класс</option>
+      </select>
+    </div>
+
+    <button class="btn primary big" id="btn-start" type="button">Начать игру</button>
+    <p style="margin-top:16px"><a class="editor-link" href="editor.html">&#9998; Редактор вопросов</a></p>
+  </div>
+</section>
+
+<section class="screen" id="screen-pick">
+  <div class="card pick-card">
+    <h2>Определяем, кто ходит первым</h2>
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <canvas id="pick-wheel" width="420" height="420"></canvas>
+    </div>
+    <div class="pick-result" id="pick-result"></div>
+    <button class="btn primary big" id="pick-spin" type="button">Крутить колесо</button>
+    <button class="btn primary big show" id="pick-go" type="button">В бой!</button>
+  </div>
+</section>
+
+<section class="screen" id="screen-board">
+  <div class="board-top">
+    <div class="board-title">
+      <button class="btn ghost small" id="btn-restart" type="button">&larr; Настройки</button>
+      <span id="turn-badge" class="turn-badge"></span>
+      <span class="used-count" id="used-count"></span>
+    </div>
+    <div class="scores" id="scores"></div>
+  </div>
+  <div class="grid-wrap">
+    <div class="grid" id="board-grid"></div>
+  </div>
+</section>
+
+<section class="screen" id="screen-end">
+  <div class="card narrow">
+    <h2 class="end-title">Итоги игры</h2>
+    <div id="end-list" class="end-list"></div>
+    <button class="btn primary big" id="btn-again" type="button">Играть ещё раз</button>
+  </div>
+</section>
+
+<div class="modal" id="modal-question">
+  <div class="modal-backdrop"></div>
+  <div class="modal-card">
+    <div class="q-meta">
+      <span class="q-theme" id="q-theme"></span>
+      <span class="q-price" id="q-price"></span>
+    </div>
+    <button class="close" id="q-close" type="button">&times;</button>
+    <div class="q-text" id="q-text"></div>
+    <div id="q-answers"></div>
+    <div class="q-asker">
+      <div class="label-asker">Кто отвечает?</div>
+      <div id="q-asker-btns"></div>
+    </div>
+    <div class="q-actions">
+      <button class="btn primary" id="q-submit" type="button">Ответить</button>
+    </div>
+    <div class="q-verdict" id="q-verdict" hidden>
+      <div class="correct-title">Правильный ответ:</div>
+      <div class="q-correct" id="q-correct"></div>
+      <div class="verdict-btns">
+        <button class="btn ok" id="q-correct-btn" type="button">Верно: +<span id="q-pts">0</span></button>
+        <button class="btn bad" id="q-wrong-btn" type="button">Неверно (0 очков)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>(function () {
+  'use strict';
+
+  var KEY = 'schoolQuizV4';
+  var KEY_V1 = 'schoolQuizV1';
+  var KEY_V2 = 'schoolQuizV2';
+  var KEY_V3 = 'schoolQuizV3';
+
+  var PRICES = [100, 200, 300, 400, 500, 600];
+
+  /* Каталог тем: 12 предметов, без вопросов (5–11 класс). */
+  var CATALOG = [
+    { name: 'Русский язык', level: 5 },
+    { name: 'Литература', level: 5 },
+    { name: 'Математика', level: 5 },
+    { name: 'Алгебра', level: 7 },
+    { name: 'Геометрия', level: 7 },
+    { name: 'История', level: 5 },
+    { name: 'Обществознание', level: 6 },
+    { name: 'География', level: 5 },
+    { name: 'Биология', level: 6 },
+    { name: 'Физика', level: 7 },
+    { name: 'Химия', level: 8 },
+    { name: 'Информатика', level: 7 }
+  ];
+
+  function empty() {
+    return { themes: [], questions: [] };
+  }
+
+  /* Генерирует 20 арифметических вопросов на каждую сложность (120 всего). */
+  function genArithmetic(test, startId) {
+    var out = [];
+    var id = startId;
+    PRICES.forEach(function (price, d) {
+      for (var k = 0; k < 20; k++) {
+        var r;
+        switch (k % 5) {
+          case 0:
+            r = { text: 'Сколько будет ' + (12 * (d + 1) + k) + ' + ' + (7 * (d + 1) + k) + '?',
+                  answer: String(19 * (d + 1) + 2 * k) };
+            break;
+          case 1:
+            r = { text: 'Сколько будет ' + (25 * (d + 1) + 2 * k) + ' − ' + (10 * (d + 1) + k) + '?',
+                  answer: String(15 * (d + 1) + k) };
+            break;
+          case 2:
+            var f1 = 5 + (k % 9), f2 = 3 + (k % 6) + d;
+            r = { text: 'Сколько будет ' + f1 + ' × ' + f2 + '?', answer: String(f1 * f2) };
+            break;
+          case 3: {
+            var div = 2 + (k % 5), quot = 6 + d + k;
+            r = { text: 'Сколько будет ' + (div * quot) + ' : ' + div + '?', answer: String(quot) };
+            break;
+          }
+          default: {
+            var n = 2 + k + 20 * d;
+            r = { text: 'Чему равен квадрат числа ' + n + '?', answer: String(n * n) };
+          }
+        }
+        out.push({ id: id++, theme: test, price: price, type: 'number', text: r.text, answer: r.answer });
+      }
+    });
+    return out;
+  }
+
+  function demo() {
+    var test = 'Тест';
+    return {
+      themes: CATALOG.slice().concat([{ name: test, level: 0 }]),
+      questions: [
+        /* --- математика --- */
+        { id: 1, theme: test, price: 100, type: 'number', text: 'Сколько будет 5 + 3?', answer: '8' },
+        { id: 2, theme: test, price: 200, type: 'number', text: 'Сколько будет 12 × 7?', answer: '84' },
+        { id: 3, theme: test, price: 300, type: 'number', text: 'Чему равен квадратный корень из 144?', answer: '12' },
+        { id: 4, theme: test, price: 400, type: 'number', text: 'Сколько будет 15% от 200?', answer: '30' },
+        { id: 5, theme: test, price: 500, type: 'choice', text: 'Какое число следующее: 2, 6, 12, 20, …?',
+          options: ['30', '34', '42', '36'], answer: '30' },
+        { id: 6, theme: test, price: 600, type: 'number', text: 'Сколько секунд в 2 часах?', answer: '7200' },
+        /* --- география --- */
+        { id: 7, theme: test, price: 100, type: 'choice', text: 'Столица Франции?',
+          options: ['Париж', 'Рим', 'Берлин', 'Мадрид'], answer: 'Париж' },
+        { id: 8, theme: test, price: 200, type: 'number', text: 'Сколько материков на Земле?', answer: '6' },
+        { id: 9, theme: test, price: 300, type: 'text', text: 'Самая длинная река в мире?', answer: 'Нил' },
+        { id: 10, theme: test, price: 400, type: 'choice', text: 'Самая большая пустыня в мире?',
+          options: ['Сахара', 'Гоби', 'Каракумы', 'Атакама'], answer: 'Сахара' },
+        { id: 11, theme: test, price: 500, type: 'text', text: 'Какой океан самый большой?', answer: 'Тихий' },
+        { id: 12, theme: test, price: 600, type: 'text', text: 'Самая высокая гора в мире?', answer: 'Эверест' },
+        /* --- история --- */
+        { id: 13, theme: test, price: 100, type: 'number', text: 'В каком году закончилась Вторая мировая война?', answer: '1945' },
+        { id: 14, theme: test, price: 200, type: 'text', text: 'Кто был первым космонавтом в истории?', answer: 'Гагарин' },
+        { id: 15, theme: test, price: 300, type: 'number', text: 'В каком году состоялся первый полёт человека в космос?', answer: '1961' },
+        { id: 16, theme: test, price: 400, type: 'choice', text: 'Кто автор романа «Война и мир»?',
+          options: ['Толстой', 'Достоевский', 'Чехов', 'Пушкин'], answer: 'Толстой' },
+        { id: 17, theme: test, price: 500, type: 'number', text: 'Сколько лет продолжалась Великая Отечественная война?', answer: '4' },
+        { id: 18, theme: test, price: 600, type: 'text', text: 'Кто основал Московский государственный университет в 1755 году?', answer: 'Ломоносов' },
+        /* --- литература --- */
+        { id: 19, theme: test, price: 100, type: 'choice', text: 'Автор романа «Евгений Онегин»?',
+          options: ['Пушкин', 'Лермонтов', 'Гоголь', 'Достоевский'], answer: 'Пушкин' },
+        { id: 20, theme: test, price: 200, type: 'text', text: 'Кто написал рассказ «Муму»?', answer: 'Тургенев' },
+        { id: 21, theme: test, price: 300, type: 'choice', text: 'Какое произведение написал Н. В. Гоголь?',
+          options: ['Ревизор', 'Война и мир', 'Отцы и дети', 'Капитанская дочка'], answer: 'Ревизор' },
+        { id: 22, theme: test, price: 400, type: 'text', text: 'Кто автор сказки «Золушка»?', answer: 'Перро' },
+        { id: 23, theme: test, price: 500, type: 'choice', text: 'Кто написал роман «Мастер и Маргарита»?',
+          options: ['Булгаков', 'Набоков', 'Островский', 'Горький'], answer: 'Булгаков' },
+        { id: 24, theme: test, price: 600, type: 'text', text: 'Из какого произведения строка «У лукоморья дуб зелёный»?', answer: 'Руслан и Людмила' },
+        /* --- биология --- */
+        { id: 25, theme: test, price: 100, type: 'choice', text: 'Сколько ног у паука?',
+          options: ['8', '6', '10', '4'], answer: '8' },
+        { id: 26, theme: test, price: 200, type: 'text', text: 'Какой газ поглощают растения при фотосинтезе?', answer: 'углекислый газ' },
+        { id: 27, theme: test, price: 300, type: 'number', text: 'Сколько камер в сердце человека?', answer: '4' },
+        { id: 28, theme: test, price: 400, type: 'choice', text: 'Какое животное НЕ является млекопитающим?',
+          options: ['Акула', 'Кит', 'Дельфин', 'Летучая мышь'], answer: 'Акула' },
+        { id: 29, theme: test, price: 500, type: 'text', text: 'Как называется совокупность всех обменных процессов в клетке?', answer: 'метаболизм' },
+        { id: 30, theme: test, price: 600, type: 'number', text: 'Сколько хромосом в клетке человека?', answer: '46' },
+        /* --- химия --- */
+        { id: 31, theme: test, price: 100, type: 'choice', text: 'Какой химический символ у кислорода?',
+          options: ['O', 'C', 'H', 'K'], answer: 'O' },
+        { id: 32, theme: test, price: 200, type: 'number', text: 'Атомный номер водорода в таблице Менделеева?', answer: '1' },
+        { id: 33, theme: test, price: 300, type: 'text', text: 'Химическая формула воды?', answer: 'H2O' },
+        { id: 34, theme: test, price: 400, type: 'choice', text: 'Какой газ необходим для горения?',
+          options: ['Кислород', 'Азот', 'Углекислый газ', 'Гелий'], answer: 'Кислород' },
+        { id: 35, theme: test, price: 500, type: 'number', text: 'Сколько атомов в молекуле углекислого газа?', answer: '3' },
+        { id: 36, theme: test, price: 600, type: 'text', text: 'Самый распространённый газ в атмосфере Земли?', answer: 'Азот' },
+        /* --- физика --- */
+        { id: 37, theme: test, price: 100, type: 'choice', text: 'В каких единицах измеряется сила?',
+          options: ['Ньютон', 'Джоуль', 'Ватт', 'Паскаль'], answer: 'Ньютон' },
+        { id: 38, theme: test, price: 200, type: 'number', text: 'Чему примерно равна скорость света (млн м/с)?', answer: '300' },
+        { id: 39, theme: test, price: 300, type: 'text', text: 'Прибор для измерения силы тока?', answer: 'амперметр' },
+        { id: 40, theme: test, price: 400, type: 'choice', text: 'Кто открыл закон всемирного тяготения?',
+          options: ['Ньютон', 'Эйнштейн', 'Архимед', 'Галилей'], answer: 'Ньютон' },
+        { id: 41, theme: test, price: 500, type: 'number', text: 'Ускорение свободного падения на Земле (м/с²)?', answer: '9.8' },
+        { id: 42, theme: test, price: 600, type: 'number', text: 'Сколько цветов в радуге (белом спектре)?', answer: '7' },
+        /* --- информатика --- */
+        { id: 43, theme: test, price: 100, type: 'choice', text: 'Сколько бит в одном байте?',
+          options: ['8', '4', '16', '32'], answer: '8' },
+        { id: 44, theme: test, price: 200, type: 'number', text: 'Сколько байт в одном килобайте?', answer: '1024' },
+        { id: 45, theme: test, price: 300, type: 'text', text: 'Как называется «мозг» компьютера?', answer: 'процессор' },
+        { id: 46, theme: test, price: 400, type: 'choice', text: 'Какая единица измерения информации самая маленькая?',
+          options: ['Бит', 'Байт', 'Килобайт', 'Мегабайт'], answer: 'Бит' },
+        { id: 47, theme: test, price: 500, type: 'text', text: 'Программа для просмотра веб-сайтов?', answer: 'браузер' },
+        { id: 48, theme: test, price: 600, type: 'number', text: 'Сколько символов можно закодировать одним байтом?', answer: '256' },
+        /* --- русский язык --- */
+        { id: 49, theme: test, price: 100, type: 'number', text: 'Сколько букв в русском алфавите?', answer: '33' },
+        { id: 50, theme: test, price: 200, type: 'number', text: 'Сколько гласных букв в русском алфавите?', answer: '10' },
+        { id: 51, theme: test, price: 300, type: 'text', text: 'Главный член предложения, отвечающий на вопрос «что делает предмет»?', answer: 'сказуемое' },
+        { id: 52, theme: test, price: 400, type: 'number', text: 'Сколько падежей в русском языке?', answer: '6' },
+        { id: 53, theme: test, price: 500, type: 'text', text: 'Какой частью речи является слово «красиво»?', answer: 'наречие' },
+        { id: 54, theme: test, price: 600, type: 'number', text: 'Какая по счёту буква Ё в русском алфавите?', answer: '7' },
+        /* --- обществознание --- */
+        { id: 55, theme: test, price: 100, type: 'number', text: 'Сколько дней в високосном году?', answer: '366' },
+        { id: 56, theme: test, price: 200, type: 'text', text: 'Высший представительный орган власти в России называется…', answer: 'Федеральное собрание' },
+        { id: 57, theme: test, price: 300, type: 'number', text: 'С какого возраста гражданин России может голосовать на выборах?', answer: '18' },
+        { id: 58, theme: test, price: 400, type: 'choice', text: 'Что относится к правам человека?',
+          options: ['Право на образование', 'Обязанность платить налоги', 'Обязанность служить в армии', 'Запрет высказывать своё мнение'], answer: 'Право на образование' },
+        { id: 59, theme: test, price: 500, type: 'text', text: 'Как называется основной закон государства?', answer: 'Конституция' },
+        { id: 60, theme: test, price: 600, type: 'number', text: 'Сколько субъектов в составе Российской Федерации?', answer: '89' }
+      ].concat(genArithmetic(test, 61))
+    };
+  }
+
+  /* Приводит данные к актуальному формату (темы = {name, level}, уровни 1–4 убраны). */
+  function normalize(d) {
+    if (!d || typeof d !== 'object') return empty();
+    var seen = {};
+    var themes = [];
+    (Array.isArray(d.themes) ? d.themes : []).forEach(function (t) {
+      var name = typeof t === 'string' ? t.trim() : String((t && t.name) || '').trim();
+      if (!name) return;
+      var key = name.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      var lvl = (t && +t.level) || 0;
+      if (lvl > 0) lvl = Math.max(5, Math.min(11, lvl));
+      else {
+        var cat = CATALOG.find(function (c) { return c.name.toLowerCase() === key; });
+        if (cat) lvl = cat.level;
+      }
+      themes.push({ name: name, level: lvl });
+    });
+    var questions = [];
+    (Array.isArray(d.questions) ? d.questions : []).forEach(function (q) {
+      if (!q || typeof q.text !== 'string' || !q.text.trim() ||
+          typeof q.answer !== 'string' || !q.answer.trim()) return;
+      var tn = String(q.theme || '').trim();
+      if (!tn) return;
+      var key = tn.toLowerCase();
+      if (!seen[key]) { seen[key] = true; themes.push({ name: tn, level: 0 }); }
+      q.theme = tn;
+      if (q.type !== 'choice' && q.type !== 'number') q.type = 'text';
+      if (q.type === 'choice' && !Array.isArray(q.options)) q.type = 'text';
+      q.price = [100, 200, 300, 400, 500, 600].indexOf(+q.price) >= 0 ? +q.price : 100;
+      questions.push(q);
+    });
+    return { themes: themes, questions: questions, version: (+d.version) || 0 };
+  }
+
+  /* Добавляет недостающие темы каталога и тестовую тему к данным. */
+  function mergeCatalog(d) {
+    d = normalize(d || {});
+    var base = demo();
+    base.themes.forEach(function (t) {
+      if (!d.themes.some(function (x) { return x.name.toLowerCase() === t.name.toLowerCase(); })) {
+        d.themes.push({ name: t.name, level: t.level });
+      }
+    });
+    var hasTest = d.themes.some(function (x) { return x.name.toLowerCase() === 'Тест'.toLowerCase(); });
+    if (!hasTest) {
+      d.themes.push({ name: 'Тест', level: 0 });
+      d.questions = d.questions.concat(base.questions);
+    }
+    return d;
+  }
+
+  /* Перенос старой версии: добавляем каталог и обновляем тему «Тест» новыми вопросами. */
+  function migrateOld(d) {
+    d = mergeCatalog(d);
+    var base = demo();
+    d.questions = d.questions.filter(function (q) {
+      return String(q.theme).toLowerCase() !== 'Тест'.toLowerCase();
+    });
+    d.questions = d.questions.concat(base.questions);
+    return d;
+  }
+
+  function readStored(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw !== null && raw !== '') return JSON.parse(raw);
+    } catch (e) { }
+    return null;
+  }
+
+  var Store = {
+    load: function () {
+      var local = readStored(KEY);
+
+      /* Если сайт лежит на хостинге рядом с quiz-questions.json,
+         подтягиваем вопросы с сервера (новые версии перезаписывают локальные). */
+      if (window.__QUIZ_JSON__ !== undefined) {
+        try {
+          var hosted = normalize(JSON.parse(window.__QUIZ_JSON__));
+          if (+(hosted.version || 0) >= +((local && local.version) || 0)) {
+            this.save(hosted);
+            return hosted;
+          }
+        } catch (e) { }
+      }
+
+      if (local) return normalize(local);
+
+      /* Первый запуск: переносим старые данные (если были) или берём заготовки. */
+      var old = readStored(KEY_V3) || readStored(KEY_V2) || readStored(KEY_V1);
+      var d = old ? migrateOld(old) : normalize(demo());
+      this.save(d);
+      return d;
+    },
+    save: function (data) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(data));
+        return true;
+      } catch (e) {
+        alert('Не удалось сохранить данные в браузере.');
+        return false;
+      }
+    },
+    get: function () {
+      return this.load();
+    },
+    reset: function () {
+      this.save(empty());
+    },
+    /* Возвращает true, если что-то добавил (каталог тем или тестовую тему). */
+    ensureCatalog: function () {
+      var data = this.load();
+      var base = demo();
+      var changed = false;
+      base.themes.forEach(function (t) {
+        if (!data.themes.some(function (x) { return x.name.toLowerCase() === t.name.toLowerCase(); })) {
+          data.themes.push({ name: t.name, level: t.level });
+          changed = true;
+        }
+      });
+      var hasTest = data.themes.some(function (x) { return x.name.toLowerCase() === 'Тест'.toLowerCase(); });
+      if (!hasTest) {
+        data.themes.push({ name: 'Тест', level: 0 });
+        data.questions = data.questions.concat(base.questions);
+        changed = true;
+      }
+      if (changed) this.save(data);
+      return changed;
+    },
+    levelLabel: function (l) {
+      l = +l || 0;
+      return l > 0 ? l + ' класс' : 'любой';
+    }
+  };
+
+  window.Store = Store;
+})();</script>
+<script>(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  var PRICES = [100, 200, 300, 400, 500, 600];
+  var PALETTE = ['#ff6b81', '#38bdf8', '#4ade80', '#fbbf24', '#c084fc', '#22d3ee', '#a3e635', '#fb923c',
+    '#f472b6', '#818cf8', '#34d399', '#e879f9'];
+
+  var G = {
+    mode: 'solo',
+    names: [],
+    players: [],
+    turn: 0,
+    themes: [],
+    board: [],
+    qRef: null,
+    asker: -1,
+    revealed: false
+  };
+
+  /* ---------------- navigation ---------------- */
+  function showScreen(id) {
+    $$('.screen').forEach(function (s) {
+      s.classList.toggle('active', s.id === 'screen-' + id);
+    });
+    if (id !== 'board') closeModal();
+  }
+
+  /* ---------------- confetti ---------------- */
+  var confettiCtx = null, confettiAnim = null;
+  var pickAnim = null;
+  function confettiStart() {
+    var c = $('#confetti');
+    confettiCtx = c.getContext('2d');
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    var parts = [];
+    for (var i = 0; i < 130; i++) {
+      parts.push({
+        x: Math.random() * c.width,
+        y: -20 - Math.random() * c.height * 0.5,
+        w: 6 + Math.random() * 7,
+        h: 8 + Math.random() * 8,
+        rot: Math.random() * 3,
+        vr: (Math.random() - 0.5) * 0.3,
+        vy: 1.4 + Math.random() * 2.6,
+        vx: (Math.random() - 0.5) * 1.4,
+        t: Math.random() * 80,
+        color: PALETTE[Math.floor(Math.random() * PALETTE.length)]
+      });
+    }
+    var last = 0;
+    function frame(t) {
+      if (!last) last = t;
+      var dt = Math.min(50, t - last);
+      last = t;
+      var ctx = confettiCtx;
+      if (!ctx) return;
+      ctx.clearRect(0, 0, c.width, c.height);
+      var alive = 0;
+      parts.forEach(function (p) {
+        p.y += p.vy * (dt / 16);
+        p.x += p.vx * (dt / 16) + Math.sin(p.t / 22) * 0.7;
+        p.rot += p.vr * (dt / 16);
+        p.t += 1;
+        if (p.y < c.height + 30) alive++;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      if (alive > 0) confettiAnim = requestAnimationFrame(frame);
+      else { ctx.clearRect(0, 0, c.width, c.height); confettiCtx = null; confettiAnim = null; }
+    }
+    if (confettiAnim) cancelAnimationFrame(confettiAnim);
+    confettiAnim = requestAnimationFrame(frame);
+  }
+  function confettiStop() {
+    if (confettiAnim) { cancelAnimationFrame(confettiAnim); confettiAnim = null; }
+    if (confettiCtx) {
+      confettiCtx.clearRect(0, 0, confettiCtx.canvas.width, confettiCtx.canvas.height);
+      confettiCtx = null;
+    }
+  }
+  window.addEventListener('resize', function () {
+    if (confettiCtx) {
+      confettiCtx.canvas.width = window.innerWidth;
+      confettiCtx.canvas.height = window.innerHeight;
+    }
+  });
+
+  /* ---------------- setup screen ---------------- */
+  function renderNames() {
+    var box = $('#names-box');
+    box.innerHTML = '';
+    var count = +$('#players-slider').value;
+    var prefix = G.mode === 'team' ? 'Команда' : 'Игрок';
+    for (var i = 0; i < count; i++) {
+      var wrap = document.createElement('div');
+      wrap.className = 'name-cloud';
+      var dot = document.createElement('span');
+      dot.className = 'name-dot';
+      dot.style.background = PALETTE[i % PALETTE.length];
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.placeholder = prefix + ' ' + (i + 1);
+      inp.value = G.names[i] || '';
+      inp.maxLength = 18;
+      wrap.appendChild(dot);
+      wrap.appendChild(inp);
+      box.appendChild(wrap);
+    }
+  }
+
+  function collectNames() {
+    var inputs = $$('#names-box input');
+    var prefix = G.mode === 'team' ? 'Команда' : 'Игрок';
+    G.players = inputs.map(function (inp, i) {
+      return {
+        name: (inp.value || '').trim() || (prefix + ' ' + (i + 1)),
+        score: 0,
+        color: PALETTE[i % PALETTE.length]
+      };
+    });
+    G.names = G.players.map(function (p) { return p.name; });
+  }
+
+  function renderThemes() {
+    var box = $('#themes-box');
+    box.innerHTML = '';
+    var data = Store.get();
+    if (!data.themes.length) {
+      box.innerHTML = '<div class="hint">Тем нет. Откройте редактор вопросов (editor.html).</div>';
+      $('#btn-select-all-themes').style.display = 'none';
+      return;
+    }
+    $('#btn-select-all-themes').style.display = '';
+    G.themes = [];
+    var filterLevel = +$('#level-filter').value || 0;
+    data.themes.forEach(function (t) {
+      if (filterLevel && t.level !== filterLevel && t.level !== 0) return;
+      var chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.dataset.name = t.name;
+      var nameSpan = document.createElement('span');
+      nameSpan.textContent = t.name;
+      var lvlSel = document.createElement('select');
+      lvlSel.className = 'chip-lvl';
+      var lvl = t.level > 0 ? t.level : 5;
+      for (var L = 5; L <= 11; L++) {
+        var op = document.createElement('option');
+        op.value = L;
+        op.textContent = L + ' класс';
+        if (lvl === L) op.selected = true;
+        lvlSel.appendChild(op);
+      }
+      chip.appendChild(nameSpan);
+      chip.appendChild(lvlSel);
+      chip.addEventListener('click', function () {
+        chip.classList.toggle('on');
+        updateThemeState();
+      });
+      ['click', 'mousedown', 'keydown'].forEach(function (ev) {
+        lvlSel.addEventListener(ev, function (e) { e.stopPropagation(); });
+      });
+      lvlSel.addEventListener('change', function () {
+        t.level = +lvlSel.value;
+        Store.save(data);
+        renderThemes();
+      });
+      box.appendChild(chip);
+    });
+    var chips = $$('#themes-box .chip');
+    if (chips.length && !chips.some(function (c) { return c.classList.contains('on'); })) {
+      chips[0].classList.add('on');
+    }
+    updateThemeState();
+  }
+
+  function updateThemeState() {
+    G.themes = $$('#themes-box .chip.on').map(function (c) { return c.dataset.name; });
+  }
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function buildBoard() {
+    var data = Store.get();
+    var qc = $('#qcount-slider') ? (+$('#qcount-slider').value || 6) : 6;
+    G.board = G.themes.map(function (th) {
+      var qs = data.questions.filter(function (q) { return q.theme === th; });
+      var byPrice = {};
+      qs.forEach(function (q) { (byPrice[q.price] = byPrice[q.price] || []).push(q); });
+      var avail = PRICES.filter(function (p) { return byPrice[p] && byPrice[p].length; });
+      var chosen = shuffle(avail.slice()).slice(0, Math.min(qc, avail.length));
+      var picked = {};
+      chosen.forEach(function (p) { picked[p] = shuffle(byPrice[p].slice())[0]; });
+      return PRICES.map(function (price) {
+        return { price: price, q: picked[price] || null, used: false };
+      });
+    });
+    var total = 0;
+    G.board.forEach(function (col) {
+      col.forEach(function (cell) { if (cell.q) total++; });
+    });
+    return total;
+  }
+
+  /* ---------------- start + pick animation ---------------- */
+  function startGame() {
+    collectNames();
+    updateThemeState();
+    if (!G.players.length) { alert('Выберите хотя бы одного игрока.'); return; }
+    if (!G.themes.length) { alert('Выберите хотя бы одну тему.'); return; }
+    var total = buildBoard();
+    if (!total) { alert('Для выбранных тем нет вопросов. Добавьте вопросы в редакторе (editor.html).'); return; }
+    if (total <= G.players.length) {
+      alert('Вопросов в игре должно быть больше, чем участников.\nСейчас вопросов ' + total + ', а участников ' + G.players.length + '.\nДобавьте ещё одну тему или вопросы в редакторе.');
+      return;
+    }
+    runPick();
+  }
+
+  function runPick() {
+    showScreen('pick');
+    if (pickAnim) cancelAnimationFrame(pickAnim);
+    pickAnim = null;
+    var spinBtn = $('#pick-spin');
+    var goBtn = $('#pick-go');
+    var result = $('#pick-result');
+    goBtn.classList.add('show');
+    result.textContent = '';
+    drawWheel(0);
+    spinBtn.disabled = false;
+    spinBtn.onclick = function () { spinWheel(); };
+    goBtn.onclick = function () { showScreen('board'); };
+  }
+
+  function drawWheel(rotation) {
+    var canvas = $('#pick-wheel');
+    var ctx = canvas.getContext('2d');
+    var size = canvas.width;
+    var cx = size / 2, cy = size / 2;
+    var R = size / 2 - 6;
+    var N = G.players.length;
+    if (!N) return;
+    var s = 2 * Math.PI / N;
+    ctx.clearRect(0, 0, size, size);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 2, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.fill();
+
+    for (var i = 0; i < N; i++) {
+      var a0 = i * s + rotation;
+      var a1 = a0 + s;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = G.players[i].color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.9)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    var maxLen = 1;
+    G.players.forEach(function (p) { maxLen = Math.max(maxLen, p.name.length); });
+    var fontSize = Math.max(11, Math.min(22, Math.floor(230 / N), Math.floor(240 / maxLen)));
+    ctx.font = '700 ' + fontSize + 'px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,.35)';
+    ctx.shadowBlur = 3;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var rText = R * 0.62;
+    for (var i = 0; i < N; i++) {
+      var mid = i * s + s / 2 + rotation;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(mid);
+      ctx.fillText(G.players[i].name, rText, 0);
+      ctx.restore();
+    }
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16, 0, 2 * Math.PI);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(26,31,77,.9)';
+    ctx.fill();
+  }
+
+  function spinWheel() {
+    var spinBtn = $('#pick-spin');
+    var goBtn = $('#pick-go');
+    var result = $('#pick-result');
+    if (pickAnim) return;
+    spinBtn.disabled = true;
+
+    var N = G.players.length;
+    var s = 2 * Math.PI / N;
+    var w = Math.floor(Math.random() * N);
+    var turns = 4 + Math.floor(Math.random() * 3);
+    var R = turns * 2 * Math.PI + (-Math.PI / 2 - (w * s + s / 2));
+
+    var dur = 3400;
+    var t0 = null;
+
+    function ease(p) { return 1 - Math.pow(1 - p, 4); }
+
+    function frame(t) {
+      if (!t0) t0 = t;
+      var p = Math.min(1, (t - t0) / dur);
+      drawWheel(ease(p) * R);
+      if (p < 1) {
+        pickAnim = requestAnimationFrame(frame);
+      } else {
+        pickAnim = null;
+        G.turn = w;
+        result.textContent = 'Первым ходит: ' + G.players[w].name;
+        result.style.color = G.players[w].color;
+        goBtn.classList.remove('show');
+        renderBoard();
+        confettiStart();
+        setTimeout(confettiStop, 4500);
+      }
+    }
+    pickAnim = requestAnimationFrame(frame);
+  }
+
+  /* ---------------- board ---------------- */
+  function renderBoard() {
+    var grid = $('#board-grid');
+    grid.innerHTML = '';
+    var tdata = Store.get();
+    grid.style.gridTemplateColumns = 'minmax(150px, 220px) repeat(' + PRICES.length + ', auto)';
+
+    grid.appendChild(document.createElement('div'));
+    PRICES.forEach(function (price) {
+      var h = document.createElement('div');
+      h.className = 'price-head';
+      h.textContent = price;
+      grid.appendChild(h);
+    });
+
+    G.themes.forEach(function (th, r) {
+      var label = document.createElement('div');
+      label.className = 'th-label';
+      var name = document.createElement('span');
+      name.textContent = th;
+      var lvl = document.createElement('span');
+      lvl.className = 'head-lvl';
+      var t = tdata.themes.find(function (x) { return x.name.toLowerCase() === th.toLowerCase(); });
+      lvl.textContent = t ? Store.levelLabel(t.level) : '';
+      label.appendChild(name);
+      label.appendChild(lvl);
+      grid.appendChild(label);
+
+      for (var c = 0; c < PRICES.length; c++) {
+        var cellData = G.board[r][c];
+        var cell = document.createElement('button');
+        cell.className = 'cell';
+        cell.type = 'button';
+        if (!cellData.q || cellData.used) {
+          cell.classList.add(cellData.used ? 'used' : 'empty');
+        } else {
+          cell.textContent = cellData.price;
+          (function (ci, ri) {
+            cell.addEventListener('click', function () { openQuestion(ci, ri); });
+          })(r, c);
+        }
+        grid.appendChild(cell);
+      }
+    });
+
+    var used = 0, total = 0;
+    G.board.forEach(function (col) {
+      col.forEach(function (cell) { if (cell.q) { total++; if (cell.used) used++; } });
+    });
+    $('#used-count').textContent = used + ' / ' + total + ' вопросов';
+    updateTurn();
+    renderScores();
+  }
+
+  function updateTurn() {
+    var badge = $('#turn-badge');
+    if (!G.players.length) return;
+    badge.textContent = G.players[G.turn].name + ' выбирает вопрос';
+    badge.classList.remove('bump');
+    void badge.offsetWidth;
+    badge.classList.add('bump');
+  }
+
+  function renderScores() {
+    var box = $('#scores');
+    box.innerHTML = '';
+    G.players.forEach(function (p, i) {
+      var card = document.createElement('div');
+      card.className = 'score-card' + (i === G.turn ? ' active' : '');
+      card.innerHTML =
+        '<span class="dot" style="background:' + p.color + '"></span>' +
+        '<span class="s-name"></span>' +
+        '<span class="s-pts">' + p.score + '</span>';
+      card.querySelector('.s-name').textContent = p.name;
+      box.appendChild(card);
+    });
+  }
+
+  function scoreBump(playerIndex) {
+    var cards = $$('#scores .score-card');
+    if (cards[playerIndex]) {
+      cards[playerIndex].classList.add('bump');
+      setTimeout(function () { cards[playerIndex].classList.remove('bump'); }, 600);
+    }
+  }
+
+  /* ---------------- question modal ---------------- */
+  function openQuestion(c, r) {
+    G.qRef = { c: c, r: r };
+    G.asker = G.turn;
+    G.revealed = false;
+
+    var cell = G.board[c][r];
+    var q = cell.q;
+    $('#q-theme').textContent = G.themes[c];
+    $('#q-price').textContent = cell.price + ' очков';
+    $('#q-price').style.background = '';
+    $('#q-text').textContent = q.text;
+
+    renderAnswers(q);
+    renderAskers();
+    $('#q-submit').disabled = false;
+    $('#q-verdict').hidden = true;
+    var cb = $('#q-correct-btn'), wb = $('#q-wrong-btn');
+    cb.disabled = false; cb.style.opacity = ''; cb.style.filter = '';
+    wb.disabled = false; wb.style.opacity = ''; wb.style.filter = '';
+    $('#modal-question').classList.add('open');
+  }
+
+  function renderAnswers(q) {
+    var box = $('#q-answers');
+    box.innerHTML = '';
+    box.classList.toggle('choice-answers', q.type === 'choice');
+    if (q.type === 'choice') {
+      q.options.forEach(function (o, i) {
+        var b = document.createElement('button');
+        b.className = 'opt';
+        b.type = 'button';
+        b.dataset.value = o;
+        b.innerHTML = '<span class="opt-letter"></span><span class="opt-text"></span>';
+        b.querySelector('.opt-letter').textContent = String.fromCharCode(65 + i);
+        b.querySelector('.opt-text').textContent = o;
+        b.addEventListener('click', function () {
+          $$('#q-answers .opt').forEach(function (x) { x.classList.remove('sel'); });
+          b.classList.add('sel');
+        });
+        box.appendChild(b);
+      });
+    } else if (q.type === 'number') {
+      var n = document.createElement('input');
+      n.className = 'answer';
+      n.type = 'number';
+      n.step = 'any';
+      n.placeholder = 'Введите число…';
+      n.id = 'q-input';
+      box.appendChild(n);
+    } else {
+      var t = document.createElement('input');
+      t.className = 'answer';
+      t.type = 'text';
+      t.placeholder = 'Введите ответ…';
+      t.id = 'q-input';
+      box.appendChild(t);
+    }
+  }
+
+  function renderAskers() {
+    var box = $('#q-asker-btns');
+    box.innerHTML = '';
+    G.players.forEach(function (p, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'asker-btn' + (i === G.asker ? ' sel' : '');
+      b.innerHTML = '<span class="dot" style="background:' + p.color + '"></span>';
+      b.appendChild(document.createTextNode(p.name));
+      b.addEventListener('click', function () {
+        G.asker = i;
+        $$('#q-asker-btns .asker-btn').forEach(function (x, xi) {
+          x.classList.toggle('sel', xi === i);
+        });
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function getAnswerValue() {
+    var q = currentQuestion();
+    if (q.type === 'choice') {
+      var sel = $('#q-answers .opt.sel');
+      return sel ? sel.dataset.value : null;
+    }
+    var inp = $('#q-input');
+    if (!inp) return null;
+    var v = (inp.value || '').trim();
+    return v === '' ? null : v;
+  }
+
+  function currentQuestion() {
+    if (!G.qRef) return null;
+    return G.board[G.qRef.c][G.qRef.r].q;
+  }
+
+  function normalize(s) {
+    return String(s)
+      .toLowerCase()
+      .replace(/\u00a0/g, ' ')
+      .replace(/[.,!?;:()"'`«»]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function answerEqualTo(q, val) {
+    if (q.type === 'number') {
+      var a = parseFloat(String(val).replace(',', '.'));
+      var b = parseFloat(String(q.answer).replace(',', '.'));
+      if (!isNaN(a) && !isNaN(b)) return a === b;
+    }
+    return normalize(val) === normalize(q.answer);
+  }
+
+  function submitAnswer() {
+    var q = currentQuestion();
+    if (!q) return;
+    if (G.asker < 0) { alert('Выберите, кто отвечает.'); return; }
+    var val = getAnswerValue();
+    if (val === null || val === '') { alert('Введите ответ.'); return; }
+
+    G.revealed = true;
+    $('#q-submit').disabled = true;
+    $$('#q-answers .opt').forEach(function (b) { b.disabled = true; });
+    $$('#q-asker-btns .asker-btn').forEach(function (b) { b.disabled = true; });
+    var inp = $('#q-input');
+    if (inp) inp.disabled = true;
+
+    $('#q-verdict').hidden = false;
+    $('#q-correct').textContent = q.answer;
+    $('#q-pts').textContent = G.board[G.qRef.c][G.qRef.r].price;
+
+    if (q.type === 'choice' || q.type === 'number') {
+      var isRight = answerEqualTo(q, val);
+      if (q.type === 'choice') {
+        $$('#q-answers .opt').forEach(function (b) {
+          if (normalize(b.dataset.value) === normalize(q.answer)) b.classList.add('right');
+          else if (b.classList.contains('sel')) b.classList.add('wrong');
+          b.classList.remove('sel');
+        });
+      }
+      var correctBtn = $('#q-correct-btn');
+      var wrongBtn = $('#q-wrong-btn');
+      if (isRight) {
+        correctBtn.style.filter = 'brightness(1.15) drop-shadow(0 0 8px rgba(74,222,128,.7))';
+        wrongBtn.style.opacity = '.5';
+        wrongBtn.disabled = true;
+      } else {
+        wrongBtn.style.filter = 'brightness(1.15) drop-shadow(0 0 8px rgba(251,113,133,.7))';
+        correctBtn.style.opacity = '.5';
+        correctBtn.disabled = true;
+      }
+    }
+  }
+
+  function closeQuestion() {
+    $('#modal-question').classList.remove('open');
+  }
+
+  function closeModal() {
+    $('#modal-question').classList.remove('open');
+  }
+
+  function verdict(correct) {
+    if (!G.revealed || !G.qRef) return;
+    var cell = G.board[G.qRef.c][G.qRef.r];
+    var pts = cell.price;
+    if (correct) {
+      G.players[G.asker].score += pts;
+    }
+    cell.used = true;
+    G.revealed = false;
+    G.qRef = null;
+    closeQuestion();
+    renderBoard();
+    scoreBump(G.asker);
+    G.turn = (G.turn + 1) % G.players.length;
+    updateTurn();
+    renderScores();
+    checkEnd();
+  }
+
+  function checkEnd() {
+    var total = 0, used = 0;
+    G.board.forEach(function (col) {
+      col.forEach(function (cell) {
+        if (cell.q) { total++; if (cell.used) used++; }
+      });
+    });
+    if (used >= total && total > 0) endGame();
+  }
+
+  /* ---------------- end ---------------- */
+  function endGame() {
+    showScreen('end');
+    var list = $('#end-list');
+    list.innerHTML = '';
+    var sorted = G.players.slice().sort(function (a, b) { return b.score - a.score; });
+    var max = sorted.length ? sorted[0].score : 0;
+    sorted.forEach(function (p, i) {
+      var row = document.createElement('div');
+      row.className = 'end-row' + (p.score === max ? ' first' : '');
+      row.innerHTML = '<span class="place">' + (i + 1) + '</span><span class="e-name"></span><span class="e-pts">' + p.score + '</span>';
+      row.querySelector('.e-name').textContent = p.name;
+      list.appendChild(row);
+    });
+    confettiStart();
+    setTimeout(confettiStop, 5000);
+  }
+
+  /* ---------------- init ---------------- */
+  function init() {
+    // mode
+    $$('.mode-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $$('.mode-btn').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        G.mode = b.dataset.mode;
+        $('#players-label').firstChild.nodeValue = G.mode === 'team' ? 'Число команд: ' : 'Число игроков: ';
+        var slider = $('#players-slider');
+        slider.min = G.mode === 'team' ? 2 : 1;
+        slider.max = G.mode === 'team' ? 8 : 12;
+        if (+slider.value < +slider.min) slider.value = slider.min;
+        if (+slider.value > +slider.max) slider.value = slider.max;
+        $('#players-label').querySelector('b').textContent = slider.value;
+        renderNames();
+      });
+    });
+
+    $('#players-slider').addEventListener('input', function () {
+      $('#players-label').querySelector('b').textContent = this.value;
+      renderNames();
+    });
+
+    $('#qcount-slider').addEventListener('input', function () {
+      $('#qcount-label').querySelector('b').textContent = this.value;
+    });
+
+    $('#btn-select-all-themes').addEventListener('click', function () {
+      var chips = $$('#themes-box .chip');
+      var allOn = chips.every(function (c) { return c.classList.contains('on'); });
+      chips.forEach(function (c) { c.classList.toggle('on', !allOn); });
+      updateThemeState();
+    });
+
+    $('#btn-start').addEventListener('click', startGame);
+
+    $('#level-filter').addEventListener('change', renderThemes);
+
+    $('#btn-restart').addEventListener('click', function () {
+      confettiStop();
+      closeModal();
+      showScreen('setup');
+      renderThemes();
+      renderNames();
+    });
+
+    $('#btn-again').addEventListener('click', function () {
+      confettiStop();
+      showScreen('setup');
+      renderThemes();
+      renderNames();
+    });
+
+    $('#q-close').addEventListener('click', function () {
+      if (G.revealed) return;
+      closeQuestion();
+    });
+    $('#modal-question').querySelector('.modal-backdrop').addEventListener('click', function () {
+      if (G.revealed) return;
+      closeQuestion();
+    });
+    $('#q-submit').addEventListener('click', submitAnswer);
+    $('#q-correct-btn').addEventListener('click', function () { verdict(true); });
+    $('#q-wrong-btn').addEventListener('click', function () { verdict(false); });
+
+    $('#players-label').querySelector('b').textContent = $('#players-slider').value;
+
+    loadQuestions();
+  }
+
+  function loadQuestions() {
+    if (!window.fetch) { setupReady(); return; }
+    fetch('quiz-questions.json')
+      .then(function (r) {
+        if (!r.ok) throw new Error('no');
+        return r.json();
+      })
+      .then(function (d) {
+        if (d && Array.isArray(d.themes) && Array.isArray(d.questions)) {
+          window.__QUIZ_JSON__ = JSON.stringify(d);
+        }
+      })
+      .catch(function () {})
+      .then(setupReady);
+  }
+
+  function setupReady() {
+    renderThemes();
+    renderNames();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();</script>
+</body>
+</html>
