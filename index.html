@@ -203,21 +203,6 @@ select:focus { border-color: var(--accent2); }
 }
 .chip:hover { border-color: var(--accent); color: var(--text); }
 .chip.on { background: var(--grad); color: #21202f; border-color: transparent; font-weight: 600; }
-.chip .chip-lvl {
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(255,255,255,.16);
-  color: var(--text);
-  padding: 2px 8px;
-  border-radius: 99px;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-  max-width: 96px;
-}
-.chip .chip-lvl option { background: #1b2333; color: var(--text); }
-.chip .chip-lvl:hover { filter: brightness(1.15); }
-.chip.on .chip-lvl { background: rgba(33,32,47,.18); color: inherit; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
 /* ---------- pick screen ---------- */
@@ -649,7 +634,7 @@ input[type="text"].answer:focus, input[type="number"].answer:focus { border-colo
     <p class="hint">Вопросов в игре должно быть больше, чем игроков.</p>
 
     <div class="field">
-      <label>Темы игры <span class="hint">кликните на класс предмета, чтобы выбрать его</span></label>
+      <label>Темы игры <span class="hint">нажмите на тему, чтобы выбрать её</span></label>
       <div id="themes-box" class="chips"></div>
       <button class="btn ghost small" id="btn-select-all-themes" type="button">выбрать все</button>
     </div>
@@ -658,20 +643,6 @@ input[type="text"].answer:focus, input[type="number"].answer:focus { border-colo
       <label id="qcount-label" for="qcount-slider">Вопросов на тему: <b>6</b></label>
       <input type="range" id="qcount-slider" min="1" max="6" value="6">
       <p class="hint">В каждой теме случайно выбираются вопросы на каждую сложность (100–600 очков).</p>
-    </div>
-
-    <div class="field">
-      <label for="level-filter">Уровень сложности тем</label>
-      <select id="level-filter">
-        <option value="0">Все темы</option>
-        <option value="5">5 класс</option>
-        <option value="6">6 класс</option>
-        <option value="7">7 класс</option>
-        <option value="8">8 класс</option>
-        <option value="9">9 класс</option>
-        <option value="10">10 класс</option>
-        <option value="11">11 класс</option>
-      </select>
     </div>
 
     <button class="btn primary big" id="btn-start" type="button">Начать игру</button>
@@ -1184,37 +1155,16 @@ input[type="text"].answer:focus, input[type="number"].answer:focus { border-colo
     }
     $('#btn-select-all-themes').style.display = '';
     G.themes = [];
-    var filterLevel = +$('#level-filter').value || 0;
     data.themes.forEach(function (t) {
-      if (filterLevel && t.level !== filterLevel && t.level !== 0) return;
       var chip = document.createElement('div');
       chip.className = 'chip';
       chip.dataset.name = t.name;
       var nameSpan = document.createElement('span');
       nameSpan.textContent = t.name;
-      var lvlSel = document.createElement('select');
-      lvlSel.className = 'chip-lvl';
-      var lvl = t.level > 0 ? t.level : 5;
-      for (var L = 5; L <= 11; L++) {
-        var op = document.createElement('option');
-        op.value = L;
-        op.textContent = L + ' класс';
-        if (lvl === L) op.selected = true;
-        lvlSel.appendChild(op);
-      }
       chip.appendChild(nameSpan);
-      chip.appendChild(lvlSel);
       chip.addEventListener('click', function () {
         chip.classList.toggle('on');
         updateThemeState();
-      });
-      ['click', 'mousedown', 'keydown'].forEach(function (ev) {
-        lvlSel.addEventListener(ev, function (e) { e.stopPropagation(); });
-      });
-      lvlSel.addEventListener('change', function () {
-        t.level = +lvlSel.value;
-        Store.save(data);
-        renderThemes();
       });
       box.appendChild(chip);
     });
@@ -1720,7 +1670,6 @@ input[type="text"].answer:focus, input[type="number"].answer:focus { border-colo
 
     $('#btn-start').addEventListener('click', startGame);
 
-    $('#level-filter').addEventListener('change', renderThemes);
 
     $('#btn-restart').addEventListener('click', function () {
       confettiStop();
